@@ -8,7 +8,7 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id','name','description','product_count']
         # fields = ['id','name','description']
         
-    product_count = serializers.IntegerField()
+    product_count = serializers.IntegerField(read_only = True)
         
     """Not Optimized method"""    
     # product_count = serializers.SerializerMethodField(
