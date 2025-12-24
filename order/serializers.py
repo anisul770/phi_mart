@@ -2,6 +2,10 @@ from rest_framework import serializers
 from order.models import Cart,CartItem,Order,OrderItem
 from product.serializers import ProductSerializer
 from product.models import Product
+from order.services import OrderService
+
+#serializer = OrderSerializer(order)
+#return Response(serializer)
 
 class SimpleProductSerializer(serializers.ModelSerializer):
     class Meta:
@@ -80,12 +84,39 @@ class CreateOrderSerializer(serializers.Serializer):
             raise serializers.ValidationError("Cart is empty")
         
         return cart_id
+    def create(self, validated_data):
+        user_id = self.context['user_id']
+        cart_id = validated_data['cart_id']
+        try:
+            order = OrderService.create_order(user_id=user_id,cart_id=cart_id)
+            return order
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
+        
+        
+    def to_representation(self, instance):
+        return OrderSerializer(instance).data
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = SimpleProductSerializer()
     class Meta:
         model = OrderItem
         fields = ['id','product','quantity','price','total_price']        
+   
+class UpdateOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['status']
+        
+    def update(self,instance,validated_data):
+        user = self.context['user']
+        new_status = validated_data['status']
+        if new_status == Order.CANCELED:
+            return OrderService.cancel_order(order=instance,user=user)
+        if not user.is_staff:
+            raise serializers.ValidationError({'detail':"You are not allowed to update this order"})
+        
+        return super().update(instance,validated_data)
     
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
