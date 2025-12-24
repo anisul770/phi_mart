@@ -7,6 +7,9 @@ from order.services import OrderService
 #serializer = OrderSerializer(order)
 #return Response(serializer)
 
+class EmptySerializer(serializers.Serializer):
+    pass
+
 class SimpleProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
@@ -108,15 +111,6 @@ class UpdateOrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ['status']
         
-    def update(self,instance,validated_data):
-        user = self.context['user']
-        new_status = validated_data['status']
-        if new_status == Order.CANCELED:
-            return OrderService.cancel_order(order=instance,user=user)
-        if not user.is_staff:
-            raise serializers.ValidationError({'detail':"You are not allowed to update this order"})
-        
-        return super().update(instance,validated_data)
     
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
