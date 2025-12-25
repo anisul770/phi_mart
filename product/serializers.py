@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from decimal import Decimal
-from product.models import Category,Product,Review
+from product.models import Category,Product,Review,ProductImage
 from django.contrib.auth import get_user_model
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -9,13 +9,12 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id','name','description','product_count']
         # fields = ['id','name','description']
         
-    product_count = serializers.IntegerField(read_only = True)
+    product_count = serializers.IntegerField(read_only = True,help_text = "Return the number of products in this category")
         
     """Not Optimized method"""    
     # product_count = serializers.SerializerMethodField(
     #     method_name='get_product_count'
     # )
-        
     # def get_product_count(self,category):
     #     count = Product.objects.filter(category=category).count()
     #     return count
@@ -39,15 +38,17 @@ class CategorySerializer(serializers.ModelSerializer):
 #     def calculate_tax(self,product):
 #         return round(product.price*Decimal(1.1),2)
 
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['id','image']
+
 class ProductSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True,read_only=True)
     class Meta:
         model = Product
-        fields = ['id','name','description','price','stock','category','price_with_tax']
+        fields = ['id','name','description','price','stock','category','price_with_tax','images']
      
-    # category = serializers.HyperlinkedRelatedField(
-    #     queryset = Category.objects.all(),
-    #     view_name = 'view-specific-category',
-    # )   
     price_with_tax = serializers.SerializerMethodField(
         method_name='calculate_tax'
     )   
@@ -58,12 +59,12 @@ class ProductSerializer(serializers.ModelSerializer):
         if price<0:
             raise serializers.ValidationError('Price could not be negative')
         return price
-    
     # just to know that this is a object level validation
     # def validate(self, attrs):
     #     if attrs['password1'!= 'password2']:
     #         raise serializers.ValidationError("Password doesn't match")
-    
+
+   
 class SimpleUserSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField(
         method_name='get_current_user_name'

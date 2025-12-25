@@ -1,20 +1,24 @@
-from django.shortcuts import render,get_object_or_404
-from rest_framework.response import Response
-from rest_framework import status
-from product.models import Product,Category,Review
-from product.serializers import ProductSerializer,CategorySerializer,ReviewSerializer
+from product.models import Product,Category,Review,ProductImage
+from product.serializers import ProductSerializer,CategorySerializer,ReviewSerializer,ProductImageSerializer
 from django.db.models import Count
 from rest_framework.viewsets import ModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 from product.filters import ProductFilter
 from rest_framework.filters import SearchFilter,OrderingFilter
 from product.paginations import DefaultPagination
-from rest_framework.permissions import IsAdminUser, AllowAny,DjangoModelPermissions,DjangoModelPermissionsOrAnonReadOnly
-from api.permissions import IsAdminOrReadonly,FullDjangoModelPermission
+from api.permissions import IsAdminOrReadonly
 from product.permissions import IsReviewAuthorOrReadOnly
+from drf_yasg.utils import swagger_auto_schema
 
 # Create your views here.
 class ProductViewSet(ModelViewSet):
+    """
+    API Endpoints for managing products in the e-commerce store
+     - Allows authenticated admin to create,update and delete product
+     - Allows users to browse and filter product
+     - Support searching by name , description and category
+     - Support ordering by price and updated_at
+    """
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
@@ -23,29 +27,36 @@ class ProductViewSet(ModelViewSet):
     pagination_class = DefaultPagination
     search_fields = ['name','description']
     ordering_fields = ['price','updated_at']
-    # permission_classes = [IsAdminUser]
     permission_classes = [IsAdminOrReadonly]
-    # permission_classes = [FullDjangoModelPermission]
-    # permission_classes = [DjangoModelPermissionsOrAnonReadOnly]
     
-    # def get_permissions(self):
-    #     if self.request.method == "GET":
-    #         return [AllowAny()]
-    #     return [IsAdminUser()]
-    # def get_queryset(self):
-    #     queryset = Product.objects.all()
-    #     category_id = self.request.query_params.get('category_id')
-    #     if category_id is not None:
-    #         queryset = Product.objects.filter(category_id=category_id)
-    #     return queryset
+    @swagger_auto_schema(
+        operation_summary='Retrieve list of products'
+    )
+    def list(self, request, *args, **kwargs):
+        """Retrieve all the product"""
+        return super().list(request, *args, **kwargs)
     
-    def destroy(self,request,*args, **kwargs):
-        product = self.get_object()
-        if product.stock > 10 :
-            return Response({'message': 'Product with stock more than 10 could not be deleted'})
-        self.perform_destroy()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    @swagger_auto_schema(
+        operation_summary = 'Create a product by admin',
+        operation_description= 'This allow an admin to create a product',
+        responses = {
+            201 : ProductSerializer,    
+            400 : "Bad Request"
+        }
+    )
+    def create(self, request, *args, **kwargs):
+        """Only authenticated admin can create product"""
+        return super().create(request, *args, **kwargs)
+    
+class ProductImageViewSet(ModelViewSet):
+    serializer_class = ProductImageSerializer
+    permission_classes = [IsAdminOrReadonly]
+    
+    def get_queryset(self):
+        return ProductImage.objects.filter(product_id = self.kwargs.get('product_pk'))
 
+    def perform_create(self, serializer):
+        serializer.save(product_id=self.kwargs.get('product_pk'))
 
 class CategoryViewSet(ModelViewSet):
     permission_classes = [IsAdminOrReadonly]
@@ -56,17 +67,17 @@ class CategoryViewSet(ModelViewSet):
 
 class ReviewViewSet(ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = [IsReviewAuthorOrReadOnly]
+    permission_classes = [IsAdminOrReadonly]
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
     
     def get_queryset(self):
-        return Review.objects.filter(product_id = self.kwargs['product_pk'])
+        return Review.objects.filter(product_id = self.kwargs.get('product_pk'))
     
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
     
     def get_serializer_context(self):
-        return {'product_id':self.kwargs['product_pk']}
+        return {'product_id':self.kwargs.get('product_pk')}
     
