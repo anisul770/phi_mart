@@ -16,14 +16,13 @@ class SimpleProductSerializer(serializers.ModelSerializer):
         fields =['id','name','price']
         
 class AddCartItemSerializer(serializers.ModelSerializer):
-    product_id = serializers.IntegerField()
     class Meta:
         model = CartItem
-        fields = ['id','product_id','quantity']
+        fields = ['id','product','quantity']
     
     def save(self,**kwargs):
         cart_id = self.context['cart_id']
-        product_id = self.validated_data['product_id']
+        product_id = self.validated_data['product'].id
         quantity = self.validated_data['quantity']
         
         try:
