@@ -1,20 +1,25 @@
 from django.shortcuts import render
+from django.db import IntegrityError
 from rest_framework.viewsets import ModelViewSet,GenericViewSet
-from rest_framework.mixins import CreateModelMixin,RetrieveModelMixin,DestroyModelMixin
+from rest_framework.mixins import CreateModelMixin,RetrieveModelMixin,DestroyModelMixin,ListModelMixin
 from order.models import Cart,CartItem,Order,OrderItem
 from order.serializers import CartSerializer,CartItemSerializer,AddCartItemSerializer,UpdateCartItemSerializer,OrderSerializer,CreateOrderSerializer,UpdateOrderSerializer,EmptySerializer
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from rest_framework.decorators import action
 from order.services import OrderService
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 # Create your views here.
 
-class CartViewSet(CreateModelMixin,RetrieveModelMixin,DestroyModelMixin,GenericViewSet):
+class CartViewSet(CreateModelMixin,RetrieveModelMixin,DestroyModelMixin,GenericViewSet,ListModelMixin):
     serializer_class = CartSerializer
     permission_classes = [IsAuthenticated]
     
     def perform_create(self, serializer):
-        serializer.save(user = self.request.user)
+        try:
+            serializer.save(user=self.request.user)
+        except IntegrityError:
+            raise ValidationError({'details': 'You already have a cart!'})
     
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
