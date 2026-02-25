@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from sslcommerz_lib import SSLCOMMERZ
 from django.conf import settings as main_settings
+from rest_framework.views import APIView
 # Create your views here.
 
 class CartViewSet(CreateModelMixin,RetrieveModelMixin,DestroyModelMixin,GenericViewSet,ListModelMixin):
@@ -152,3 +153,12 @@ def payment_cancel(request):
 @api_view(['POST']) 
 def payment_fail(request):
   return redirect(f"{main_settings.FRONTED_URL}/dashboard/orders/")
+
+class HasOrderedProduct(APIView):
+  permission_classes = [IsAuthenticated]
+  
+  def get(self, request, product_id):
+    user = request.user
+    has_ordered = OrderItem.objects.filter(order__user=user, product_id=product_id).exists()
+    return Response({"hasOrdered": has_ordered})
+    
