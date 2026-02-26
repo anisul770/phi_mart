@@ -69,7 +69,7 @@ class CategoryViewSet(ModelViewSet):
 
 class ReviewViewSet(ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = [IsAdminOrReadonly]
+    permission_classes = [IsReviewAuthorOrReadOnly]
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
